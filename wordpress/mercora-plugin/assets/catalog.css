@@ -1,0 +1,77 @@
+/* ---------- One horizontal row: [Category ▾] [Sort by ▾] ---------- */
+.mercora-catalog-controls {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: .75rem;
+  margin: 0;
+}
+
+/* Strip wrapper margins/padding from both our dropdown and WooCommerce's sorting block */
+.mercora-catalog-controls > *,
+.mercora-catalog-controls .wc-block-catalog-sorting,
+.mercora-catalog-controls .wp-block-woocommerce-catalog-sorting,
+.mercora-catalog-controls form,
+.mercora-catalog-controls .woocommerce-ordering,
+.mercora-cat-filter {
+  display: flex;
+  align-items: center;
+  margin: 0 !important;
+  padding: 0 !important;
+  float: none !important;
+}
+
+/* Hide the accessible label visually (regardless of theme support) */
+.mercora-cat-filter label {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Identical select styling ---------- */
+.mercora-cat-filter select,
+.mercora-catalog-controls select.orderby,
+.mercora-catalog-controls select {
+  box-sizing: border-box;
+  height: 42px;
+  min-width: 210px;
+  margin: 0 !important;
+  padding: 0 2.4rem 0 .9rem;
+  border: 1px solid #d6d2cc;
+  border-radius: 10px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231c1b1a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .9rem center;
+  background-size: 12px 8px;
+  color: #1c1b1a;
+  font: inherit;
+  font-size: .95rem;
+  line-height: 40px;
+  vertical-align: middle;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.mercora-catalog-controls select:hover { border-color: #a8a29a; }
+.mercora-catalog-controls select:focus {
+  outline: 2px solid #1c1b1a;
+  outline-offset: 1px;
+}
+
+/* ---------- Mobile: stack full width ---------- */
+@media (max-width: 600px) {
+  .mercora-catalog-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mercora-catalog-controls > *,
+  .mercora-catalog-controls form,
+  .mercora-catalog-controls select { width: 100%; }
+}

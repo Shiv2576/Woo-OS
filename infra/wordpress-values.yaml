@@ -1,0 +1,40 @@
+wordpressUsername: admin
+wordpressPassword: mercora-admin-123   # local only
+wordpressEmail: admin@example.com
+wordpressBlogName: Mercora
+
+service:
+  type: ClusterIP
+
+# Routing is handled by infra/ingress.yaml (no host restriction)
+ingress:
+  enabled: false
+
+persistence:
+  size: 5Gi
+
+# Plugin source from your Mac, mounted at a neutral path and symlinked in by setup-woo.sh
+extraVolumes:
+  - name: mercora-plugin
+    hostPath:
+      path: /mnt/mercora-plugin
+      type: Directory
+extraVolumeMounts:
+  - name: mercora-plugin
+    mountPath: /mnt/mercora-plugin
+
+mariadb:
+  auth:
+    rootPassword: mercora-root-123
+    password: mercora-db-123
+  primary:
+    persistence:
+      size: 5Gi
+
+# Replace the chart's small default preset (seeding + WooCommerce need headroom)
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 2Gi

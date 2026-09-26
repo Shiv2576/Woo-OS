@@ -1,0 +1,44 @@
+.mercora-launcher {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 9999;
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .85rem 1.25rem;
+  border-radius: 999px;
+  background: #1c1b1a;
+  color: #fff !important;
+  font: 600 15px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+  text-decoration: none !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.mercora-launcher:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .24);
+}
+.mercora-alice-button {
+  display: inline-block;
+  padding: .8rem 1.4rem;
+  border-radius: 10px;
+  background: #1c1b1a;
+  color: #fff !important;
+  font-weight: 600;
+  text-decoration: none !important;
+}
+.mercora-alice-button:hover { opacity: .9; }
+
+/* ---------- Homepage hero ---------- */
+.mercora-hero {
+  margin: 1rem 0 3rem;
+  padding: 4.5rem 1.5rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1c1b1a 0%, #3a3632 100%);
+  color: #fff;
+  text-align: center;
+}
+.mercora-hero h1 { color: #fff; font-size: clamp(2rem, 5vw, 3.25rem); margin: 0 0 .75rem; }
+.mercora-hero p  { color: rgba(255,255,255,.8); font-size: 1.1rem; margin: 0 auto 1.75rem; max-width: 560px; }
+.mercora-hero .mercora-alice-button { background: #fff; color: #1c1b1a !important; padding: .9rem 1.6rem; border-radius: 12px; }

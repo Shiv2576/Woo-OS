@@ -1,0 +1,98 @@
+/* =====================================================================
+   Mercora footer — shadcn-style, site-wide
+   ===================================================================== */
+.mrc-footer {
+  --f-bg: #ffffff;
+  --f-fg: #09090b;
+  --f-muted: #71717a;
+  --f-border: #e4e4e7;
+  --f-secondary: #f4f4f5;
+  --f-font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  width: 100%;
+  background: var(--f-bg);
+  border-top: 1px solid var(--f-border);
+  color: var(--f-fg);
+  font-family: var(--f-font);
+  -webkit-font-smoothing: antialiased;
+}
+.mrc-footer *, .mrc-footer *::before, .mrc-footer *::after { box-sizing: border-box; }
+
+/* Spacing between page content and footer (none on the homepage: the CTA band sits right above) */
+body .wp-site-blocks > .mrc-footer { margin-block-start: 4rem !important; }
+body.home .wp-site-blocks > .mrc-footer { margin-block-start: 0 !important; border-top: 0; }
+body.home .wp-site-blocks > main { padding-bottom: 0 !important; margin-bottom: 0 !important; }
+
+.mrc-footer__container { max-width: 1240px; margin: 0 auto; padding: 0 1.5rem; }
+
+.mrc-footer__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+  gap: 2.5rem;
+  padding: 3.5rem 0 3rem;
+}
+
+/* Brand column */
+.mrc-footer__logo {
+  display: inline-flex; align-items: center; gap: .6rem;
+  color: var(--f-fg) !important; text-decoration: none !important;
+  font-size: 1.05rem; font-weight: 600; letter-spacing: -0.02em;
+}
+.mrc-footer__mark {
+  display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--f-fg); color: #fafafa; font-size: .85rem;
+}
+.mrc-footer__brand p {
+  max-width: 22rem; margin: 1rem 0 1.25rem;
+  color: var(--f-muted); font-size: .9rem; line-height: 1.6;
+}
+.mrc-footer__cta {
+  display: inline-flex; align-items: center; gap: .4rem;
+  height: 36px; padding: 0 .95rem;
+  border: 1px solid var(--f-border); border-radius: 8px;
+  background: var(--f-bg); color: var(--f-fg) !important;
+  font-size: .85rem; font-weight: 500; text-decoration: none !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  transition: background .15s ease;
+}
+.mrc-footer__cta:hover { background: var(--f-secondary); }
+
+/* Link columns */
+.mrc-footer__col h4 {
+  margin: 0 0 1rem;
+  font-family: var(--f-font);
+  font-size: .85rem; font-weight: 600; letter-spacing: -0.01em; color: var(--f-fg);
+}
+.mrc-footer__col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .65rem; }
+.mrc-footer__col li { margin: 0; }
+.mrc-footer__col a {
+  color: var(--f-muted) !important; text-decoration: none !important;
+  font-size: .875rem; transition: color .15s ease;
+}
+.mrc-footer__col a:hover { color: var(--f-fg) !important; }
+
+/* Bottom row */
+.mrc-footer__bottom {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  padding: 1.25rem 0 1.75rem;
+  border-top: 1px solid var(--f-border);
+  color: var(--f-muted); font-size: .8rem;
+}
+.mrc-footer__badge {
+  display: inline-flex; align-items: center; gap: .45rem;
+  height: 26px; padding: 0 .7rem;
+  border: 1px solid var(--f-border); border-radius: 999px;
+  font-weight: 500;
+}
+.mrc-footer__dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .mrc-footer__top { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mrc-footer__brand { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .mrc-footer__top { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem; padding-top: 2.5rem; }
+  .mrc-footer__bottom { flex-direction: column; align-items: flex-start; }
+}

@@ -1,0 +1,260 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap");
+
+/* =====================================================================
+   Alice — shadcn-style (zinc palette, hairline borders)
+   Layout/dimensions unchanged: fixed header + composer, 880px column.
+   ===================================================================== */
+:root {
+  --al-bg: #ffffff;
+  --al-fg: #09090b;
+  --al-muted: #71717a;
+  --al-border: #e4e4e7;
+  --al-secondary: #f4f4f5;
+  --al-ring: rgba(9, 9, 11, .08);
+  --al-font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ---------- Page shell: fixed header + fixed composer, scrolling middle ---------- */
+html, body.mercora-assistant { height: 100%; }
+body.mercora-assistant {
+  margin: 0;
+  overflow: hidden;
+  background: var(--al-bg);
+  color: var(--al-fg);
+  font-family: var(--al-font);
+  -webkit-font-smoothing: antialiased;
+}
+.alice {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--al-bg);
+}
+/* Leave room for the WordPress admin bar when logged in */
+body.admin-bar .alice { top: 32px; }
+@media (max-width: 782px) { body.admin-bar .alice { top: 46px; } }
+
+/* ---------- Header (fixed) ---------- */
+.alice__bar {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .85rem 1.5rem;
+  border-bottom: 1px solid var(--al-border);
+  background: rgba(255, 255, 255, .85);
+  backdrop-filter: saturate(180%) blur(8px);
+  -webkit-backdrop-filter: saturate(180%) blur(8px);
+}
+.alice__home {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 .65rem;
+  margin-left: -.65rem;
+  border-radius: 8px;
+  color: var(--al-muted);
+  font-size: .875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background .15s ease, color .15s ease;
+}
+.alice__home:hover { background: var(--al-secondary); color: var(--al-fg); }
+
+.alice__title {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  font-size: .95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.alice__title::before {           /* avatar */
+  content: "✦";
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--al-fg);
+  color: #fafafa;
+  font-size: .8rem;
+}
+
+.alice__status {                  /* badge pill */
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  height: 26px;
+  padding: 0 .7rem;
+  border: 1px solid var(--al-border);
+  border-radius: 999px;
+  background: var(--al-bg);
+  color: var(--al-muted);
+  font-size: .75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.alice__status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a1a1aa;
+}
+.alice__status.is-ok::before  { content: ""; background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, .18); }
+.alice__status.is-bad::before { content: ""; background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, .18); }
+
+/* ---------- Conversation (the only scrolling area) ---------- */
+.alice__thread {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+.alice__thread::-webkit-scrollbar { width: 10px; }
+.alice__thread::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 999px; border: 3px solid var(--al-bg); }
+.alice__thread::-webkit-scrollbar-track { background: transparent; }
+
+/* faint fading grid behind the top of the conversation */
+.alice__thread::before {
+  content: "";
+  position: sticky;
+  top: 0;
+  display: block;
+  height: 0;
+  pointer-events: none;
+}
+.alice__thread {
+  background-image:
+    linear-gradient(to right, var(--al-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--al-border) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-attachment: local;
+}
+.alice__thread-inner {
+  position: relative;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 100%;
+  background: linear-gradient(to bottom, rgba(255,255,255,.55) 0, var(--al-bg) 320px);
+  box-shadow: 0 0 0 100vmax var(--al-bg);   /* grid only shows near the top */
+  clip-path: inset(0 -100vmax);
+}
+
+/* ---------- Messages ---------- */
+.alice__msg {
+  max-width: 80%;
+  padding: .75rem 1rem;
+  border-radius: 14px;
+  line-height: 1.6;
+  font-size: 15px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  animation: alice-in .18s ease-out;
+}
+.alice__msg--assistant {
+  align-self: flex-start;
+  background: var(--al-secondary);
+  color: var(--al-fg);
+  border: 1px solid transparent;
+  border-bottom-left-radius: 4px;
+}
+.alice__msg--user {
+  align-self: flex-end;
+  background: var(--al-fg);
+  color: #fafafa;
+  border-bottom-right-radius: 4px;
+}
+@keyframes alice-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- Composer (fixed) ---------- */
+.alice__dock {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  padding: .5rem 1.5rem 1rem;
+  background: linear-gradient(to top, var(--al-bg) 75%, rgba(255, 255, 255, 0));
+}
+.alice__composer {
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: .5rem;
+  padding: .55rem .55rem .55rem 1rem;
+  background: var(--al-bg);
+  border: 1px solid var(--al-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px -12px rgba(0, 0, 0, .08);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.alice__composer:focus-within {
+  border-color: #a1a1aa;
+  box-shadow: 0 0 0 4px var(--al-ring), 0 8px 24px -12px rgba(0, 0, 0, .12);
+}
+.alice__composer textarea {
+  flex: 1;
+  min-height: 24px;
+  max-height: 200px;
+  padding: .45rem 0;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: var(--al-fg);
+  font-family: var(--al-font);
+  font-size: 15px;
+  line-height: 1.5;
+  box-shadow: none;
+}
+.alice__composer textarea::placeholder { color: #a1a1aa; }
+
+.alice__send {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--al-fg);
+  color: #fafafa;
+  cursor: pointer;
+  transition: background .15s ease, opacity .15s ease, transform .1s ease;
+}
+.alice__send:hover:not(:disabled) { background: #27272a; }
+.alice__send:active:not(:disabled) { transform: translateY(1px); }
+.alice__send:disabled { opacity: .25; cursor: default; }
+
+.alice__hint {
+  max-width: 880px;
+  margin: .55rem auto 0;
+  font-size: .75rem;
+  color: #a1a1aa;
+  text-align: center;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 640px) {
+  .alice__bar, .alice__dock { padding-left: .9rem; padding-right: .9rem; }
+  .alice__thread-inner { padding: 1.25rem .9rem .75rem; }
+  .alice__msg { max-width: 90%; }
+  .alice__hint { display: none; }
+  .alice__status { display: none; }
+}
