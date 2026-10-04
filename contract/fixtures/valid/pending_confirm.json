@@ -1,0 +1,28 @@
+{
+  "v": 1,
+  "turn": 3,
+  "session": "s_abc",
+  "catalog_version": 412,
+  "msg": "yes",
+  "ctx": {
+    "on_screen": [182, 291],
+    "viewed": [182],
+    "added": [],
+    "rejected": [],
+    "slots": {
+      "cat": "running_shoes",
+      "max_price": 3000,
+      "min_price": null,
+      "brand": null,
+      "tag": null
+    },
+    "pending": {
+      "type": "confirm",
+      "question": "Add this to your cart?",
+      "options": ["Yes", "No"]
+    },
+    "cart": [],
+    "page": null,
+    "past_purchases": []
+  }
+}

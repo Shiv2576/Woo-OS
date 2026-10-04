@@ -1,0 +1,24 @@
+{
+  "v": 1,
+  "turn": 1,
+  "session": "s_abc",
+  "catalog_version": 412,
+  "msg": "running shoes under 3000",
+  "ctx": {
+    "on_screen": [],
+    "viewed": [],
+    "added": [],
+    "rejected": [],
+    "slots": {
+      "cat": null,
+      "max_price": null,
+      "min_price": null,
+      "brand": null,
+      "tag": null
+    },
+    "pending": null,
+    "cart": [],
+    "page": null,
+    "past_purchases": []
+  }
+}

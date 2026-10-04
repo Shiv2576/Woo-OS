@@ -1,0 +1,229 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "mercora-contract-v1",
+  "definitions": {
+    "slots": {
+      "type": "object",
+      "properties": {
+        "cat": { "type": ["string", "null"] },
+        "max_price": { "type": ["integer", "null"] },
+        "min_price": { "type": ["integer", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "focus": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["product_id"],
+          "properties": {
+            "product_id": { "type": "integer" },
+            "chosen": { "type": "object" }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "pending": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "slot" },
+            "slot": { "type": "string" },
+            "product": { "type": "string" },
+            "expected": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": ["type", "question", "options"],
+          "properties": {
+            "type": { "const": "confirm" },
+            "question": { "type": "string" },
+            "options": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 2
+            },
+            "product_id": { "type": ["integer", "null"] }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": ["type", "options", "product_ids"],
+          "properties": {
+            "type": { "const": "choose" },
+            "question": { "type": "string" },
+            "then": { "type": "string" },
+            "options": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            },
+            "product_ids": { "type": "array", "items": { "type": "integer" } }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": ["type", "product_id"],
+          "properties": {
+            "type": { "const": "undo" },
+            "product_id": { "type": "integer" },
+            "qty": { "type": "integer" }
+          },
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "required": ["type", "product_id", "options"],
+          "properties": {
+            "type": { "const": "option" },
+            "product_id": { "type": "integer" },
+            "attribute": { "type": "string" },
+            "options": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "ctx": {
+      "type": "object",
+      "required": ["on_screen", "slots", "pending", "cart", "past_purchases"],
+      "properties": {
+        "on_screen": { "type": "array", "items": { "type": "integer" } },
+        "viewed": { "type": "array", "items": { "type": "integer" } },
+        "added": { "type": "array", "items": { "type": "integer" } },
+        "rejected": { "type": "array", "items": { "type": "integer" } },
+        "slots": { "$ref": "#/definitions/slots" },
+        "pending": { "$ref": "#/definitions/pending" },
+        "cart": { "type": "array" },
+        "page": { "type": ["string", "null"] },
+        "past_purchases": { "type": "array", "items": { "type": "integer" } },
+        "focus": { "$ref": "#/definitions/focus" }
+      },
+      "additionalProperties": false
+    },
+    "store": {
+      "type": "object",
+      "required": ["name", "currency"],
+      "properties": {
+        "name": { "type": "string" },
+        "currency": { "type": "string" },
+        "locale": { "type": "string" },
+        "attributes": { "type": "array" },
+        "faq": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+    "turn_request": {
+      "type": "object",
+      "required": ["v", "turn", "session", "catalog_version", "msg", "ctx"],
+      "properties": {
+        "v": { "const": 1 },
+        "turn": { "type": "integer", "minimum": 1 },
+        "session": { "type": "string" },
+        "catalog_version": { "type": "integer" },
+        "msg": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "placeholders": { "type": "array" },
+        "store": { "$ref": "#/definitions/store" },
+        "ctx": { "$ref": "#/definitions/ctx" }
+      },
+      "additionalProperties": false
+    },
+    "patch": {
+      "type": "object",
+      "properties": {
+        "on_screen": { "type": "array", "items": { "type": "integer" } },
+        "viewed": { "type": "array", "items": { "type": "integer" } },
+        "added": { "type": "array", "items": { "type": "integer" } },
+        "rejected": { "type": "array", "items": { "type": "integer" } },
+        "slots": { "$ref": "#/definitions/slots" },
+        "pending": { "$ref": "#/definitions/pending" },
+        "page": { "type": ["string", "null"] },
+        "focus": { "$ref": "#/definitions/focus" }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["type", "product_id"],
+          "properties": {
+            "type": { "const": "cart.add" },
+            "product_id": { "type": "integer" },
+            "variation_id": { "type": ["integer", "null"] },
+            "qty": { "type": "integer", "minimum": 1, "maximum": 20 }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["type", "product_id"],
+          "properties": {
+            "type": { "const": "cart.remove" },
+            "product_id": { "type": "integer" },
+            "variation_id": { "type": ["integer", "null"] }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "navigate" },
+            "url": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "display": {
+      "type": "object",
+      "required": ["template", "speech"],
+      "properties": {
+        "template": { "type": "string" },
+        "speech": { "type": "string" },
+        "items": { "type": "array" },
+        "buttons": { "type": "array", "items": { "type": "string" } },
+        "table": { "type": ["object", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "turn_response": {
+      "type": "object",
+      "required": ["turn", "patch", "action", "display", "meta"],
+      "properties": {
+        "turn": { "type": "integer" },
+        "patch": { "$ref": "#/definitions/patch" },
+        "action": { "$ref": "#/definitions/action" },
+        "display": { "$ref": "#/definitions/display" },
+        "meta": {
+          "type": "object",
+          "required": ["path", "llm_calls", "tokens_in", "tokens_out", "ms"],
+          "properties": {
+            "path": { "type": "string" },
+            "llm_calls": { "type": "integer" },
+            "tokens_in": { "type": "integer" },
+            "tokens_out": { "type": "integer" },
+            "ms": { "type": "number" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

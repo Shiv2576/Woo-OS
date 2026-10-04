@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "session": "s_abc",
+  "catalog_version": 412,
+  "msg": "hello",
+  "ctx": {
+    "on_screen": [],
+    "slots": {},
+    "pending": null,
+    "cart": [],
+    "past_purchases": []
+  }
+}
