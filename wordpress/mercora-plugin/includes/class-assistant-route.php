@@ -53,6 +53,13 @@ final class Assistant_Route
             "catalogVersion" => (int) get_option("mercora_catalog_version", 0),
             "nonce" => wp_create_nonce("wc_store_api"),
             "store" => self::build_store_for_js(),
+
+            // The saved conversation (from the WooCommerce session) and how to save it.
+            // The REST nonce matters for logged-in shoppers: without it WordPress
+            // treats the save as a guest's and the chat lands in the wrong session.
+            "chat" => Chat_State::get(),
+            "chatApi" => esc_url_raw(rest_url("mercora/v1/chat")),
+            "restNonce" => wp_create_nonce("wp_rest"),
         ];
 
         wp_enqueue_style(

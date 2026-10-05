@@ -37,8 +37,19 @@ _STOP = {
 }
 
 
+def _stem(t: str) -> str:
+    """Treat plurals alike ("dates" = "date", "chips" = "chip"). Applied to the
+    catalog AND to queries, so the two always agree."""
+    return t[:-1] if len(t) > 3 and t.endswith("s") and not t.endswith("ss") else t
+
+
 def tokenize(text: str) -> list[str]:
-    return [t for t in _TOKEN.findall(html.unescape(text).lower()) if t not in _STOP]
+    return [
+        _stem(t) for t in _TOKEN.findall(html.unescape(text).lower()) if t not in _STOP
+    ]
+
+
+_TAGS = re.compile(r"<[^>]+>")
 
 
 def _minor_to_rupees(value: str | int | None, minor_unit: int) -> int:
@@ -159,12 +170,17 @@ class CatalogIndex:
             raw.get("images") or [],
         )
         name = html.unescape(raw.get("name", ""))
+        blurb = _TAGS.sub(
+            " ",
+            (raw.get("short_description") or "") + " " + (raw.get("description") or ""),
+        )
         token_src = " ".join(
             [
                 name,
                 " ".join(html.unescape(c["name"]) for c in cats),
                 " ".join(html.unescape(t["name"]) for t in tags),
                 " ".join(v for vs in labels.values() for v in vs),
+                html.unescape(blurb)[:600],  # "naturally sweet" in a description counts
             ]
         )
         return Product(
@@ -230,6 +246,10 @@ class CatalogIndex:
         return n
 
     # ------------------------------------------------------------ search
+    def unmatched_terms(self, text: str) -> list[str]:
+        """Words in `text` that NO product in the store contains."""
+        return [t for t in tokenize(text) if t not in self.text]
+
     def search(self, q: SearchQuery) -> SearchResult:
         t0 = time.perf_counter()
         pool: set[int] | None = None

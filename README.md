@@ -94,3 +94,10 @@ Phase C — optimise (after real usage data)
 Parser rules for the top patterns from logs
 Query result caching
 Measure the real zero-LLM percentage
+
+5 - Core Features.
+Core Agent (LangGraph + PostgreSQL + Woo) Deterministic state machine routing, hybrid vector/SQL search, multi-tenant isolation, real-time WooCommerce webhook sync.
+Voice Interface (WebSockets + Streaming TTS) Low-latency streaming pipeline, hands-free conversational UI, real-time frontend tool manipulation.
+LangSmith Tracing & Cost Monitoring Observability, token cost management per order, latency bottleneck detection across complex graph nodes.
+Automated Agent Evals (Ragas / Continuous Integration) Regression testing, Tool-Call F1 accuracy measurement, strict 0% threshold for cross-tenant data leaks.
+Universal Commerce Protocol (UCP) Interoperability with modern agentic standards (/.well-known/ucp), enabling off-site checkout via external AI engines (Claude, ChatGPT, Gemini).

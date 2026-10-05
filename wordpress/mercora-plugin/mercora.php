@@ -34,6 +34,7 @@ require_once MERCORA_PATH . "includes/class-home.php";
 require_once MERCORA_PATH . "includes/class-footer.php";
 require_once MERCORA_PATH . "includes/class-sync.php";
 require_once MERCORA_PATH . "includes/class-brain.php";
+require_once MERCORA_PATH . "includes/class-chat-state.php";
 
 Mercora\Assistant_Route::init();
 Mercora\Rest::init();
@@ -42,6 +43,7 @@ Mercora\Catalog_Controls::init();
 Mercora\Home::init();
 Mercora\Footer::init();
 Mercora\Sync::init();
+Mercora\Chat_State::init();
 
 register_activation_hook(__FILE__, static function () {
     Mercora\Assistant_Route::add_rewrite();

@@ -55,6 +55,15 @@ class Filters(BaseModel):
     # e.g. "for a monsoon trek" (kept for later scoring)
     soft_preference: str | None = None
 
+    related: list[str] = Field(default_factory=list)
+
+    @field_validator("related", mode="before")
+    @classmethod
+    def _related(cls, v):
+        if not isinstance(v, list):
+            return []
+        return [str(x).strip() for x in v if str(x).strip()][:5]
+
     @field_validator("max_price", "min_price", mode="before")
     @classmethod
     def _price(cls, v):
@@ -138,6 +147,8 @@ _JSON_SHAPE = [
     '  "faq_topic": str|null,',
     '  "candidates": [<numbers from the list>],',
     '  "clarify_for": "cart_add|cart_remove|null"',
+    '              "soft_preference": str|null} or null,',
+    '              "soft_preference": str|null, "related": [str]} or null,',
     "}",
 ]
 
@@ -171,6 +182,13 @@ _RULES = [
     "  something is never order_status.",
     "- faq_topic must be one of the FAQ topics listed.",
     "- Never invent a product, category or topic that is not listed above.",
+    "- keywords: the descriptive words the shopper used for the product (e.g.",
+    '  "sweet snacks", "spicy coconut chips"), or null if the message only names',
+    "  a category.",
+    "- related: only when keywords contain a TASTE, OCCASION or CONCEPT word",
+    "  (sweet, healthy, gift, festive) that a store would not tag literally. List",
+    "  up to 5 product words from the store's categories and product names that",
+    "  would satisfy it (sweet -> chocolate, candy, dates, raisins). Otherwise [].",
 ]
 
 

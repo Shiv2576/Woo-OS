@@ -1,20 +1,23 @@
-<?php defined( 'ABSPATH' ) || exit; ?>
+<?php defined("ABSPATH") || exit(); ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
-	<meta charset="<?php bloginfo( 'charset' ); ?>">
+	<meta charset="<?php bloginfo("charset"); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
-	<title>Alice — <?php echo esc_html( get_bloginfo( 'name' ) ); ?></title>
+	<title>Alice — <?php echo esc_html(get_bloginfo("name")); ?></title>
 	<?php wp_head(); ?>
 </head>
-<body <?php body_class( 'mercora-assistant' ); ?>>
+<body <?php body_class("mercora-assistant"); ?>>
 <?php wp_body_open(); ?>
 <div class="alice">
 
 	<header class="alice__bar">
-		<a class="alice__home" href="<?php echo esc_url( home_url( '/' ) ); ?>">&larr; <?php echo esc_html( get_bloginfo( 'name' ) ); ?></a>
+		<a class="alice__home" href="<?php echo esc_url(
+      home_url("/"),
+  ); ?>">&larr; <?php echo esc_html(get_bloginfo("name")); ?></a>
 		<span class="alice__title">Alice</span>
 		<span class="alice__status" id="alice-status">Checking store…</span>
+		<button type="button" class="alice__new" id="alice-new">New chat</button>
 	</header>
 
 	<main class="alice__thread" id="alice-scroll">

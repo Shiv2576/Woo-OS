@@ -907,24 +907,54 @@ def _add_variation(
 
 
 def _search(req: TurnRequest, d: Decision, catalog, m, t0: float) -> TurnResponse:
+    """Search, then describe HONESTLY what was found.
+
+    The tagline is built from facts the code computed (which words matched,
+    which categories the results came from), never from the model, so it
+    cannot claim a match that did not happen.
+    """
     f = d.filters or Filters()
+    idx = catalog.index
     category_slug = _resolve_category(f.category_text, catalog)
-    text = (f.keywords or "").strip() or ("" if category_slug else req.msg)
+    cat_name = idx.categories[category_slug].name if category_slug else None
+    kw = (f.keywords or "").strip()
+    price = dict(max_price=f.max_price, min_price=f.min_price)
+    no_price = dict(max_price=None, min_price=None)
 
-    base = dict(
-        text=text, category=category_slug, exclude_ids=req.ctx.rejected, limit=6
-    )
-    res = catalog.index.search(
-        SearchQuery(max_price=f.max_price, min_price=f.min_price, **base)
-    )
+    def run(text: str, category: str | None):
+        """One search; if the price limits leave nothing, drop them (and say so)."""
+        q = dict(text=text, category=category, exclude_ids=req.ctx.rejected, limit=6)
+        r = idx.search(SearchQuery(**price, **q))
+        if r.products or not (f.max_price or f.min_price):
+            return r, False
+        r2 = idx.search(SearchQuery(**no_price, **q))
+        return r2, bool(r2.products)
 
-    relaxed = False
-    if not res.products and (f.max_price or f.min_price):
-        res = catalog.index.search(SearchQuery(**base))  # drop the price limits, say so
-        relaxed = bool(res.products)
+    # Words the shopper used that NO product in the store contains ("sweet").
+    missed = idx.unmatched_terms(kw)
+    missed_words = [
+        w
+        for w in re.findall(r"[a-z0-9]+", kw.lower())
+        if (tokenize(w) or [""])[0] in missed
+    ]
+
+    outcome, relaxed = "exact", False
+    if not missed:
+        res, relaxed = run(kw or ("" if category_slug else req.msg), category_slug)
+    else:
+        res, relaxed, outcome = None, False, "popular"
+        if f.related:  # the model's reading of the word, checked against the catalog
+            text = " ".join(f.related)
+            res, relaxed = run(text, category_slug)
+            if not res.products and category_slug:
+                res, relaxed = run(text, None)
+            outcome = "related" if res.products else outcome
+        if res is None or not res.products:
+            res, relaxed = run("", category_slug)
+            outcome = "category" if category_slug else "popular"
 
     products = [p.card() for p in res.products]
-    label = f.keywords or f.category_text or req.msg
+    label = kw or f.category_text or req.msg
     new_slots = Slots(
         cat=category_slug,
         max_price=None if relaxed else f.max_price,
@@ -944,14 +974,9 @@ def _search(req: TurnRequest, d: Decision, catalog, m, t0: float) -> TurnRespons
             t0,
         )
 
-    if relaxed:
-        limit_txt = (
-            f"under ₹{f.max_price:,}" if f.max_price else f"over ₹{f.min_price:,}"
-        )
-        speech = f'Nothing {limit_txt} for "{label}" — here are the closest options.'
-    else:
-        speech = f'Here are {len(products)} results for "{label}".'
-
+    speech = _tagline(
+        outcome, label, missed_words, res.products, relaxed, f, cat_name, catalog
+    )
     return _build(
         req,
         Patch(on_screen=[p["id"] for p in products], slots=new_slots, focus=None),
@@ -965,6 +990,71 @@ def _search(req: TurnRequest, d: Decision, catalog, m, t0: float) -> TurnRespons
         m,
         t0,
     )
+
+
+def _describe(products: list, catalog) -> str:
+    """The real categories the results came from: "Chocolates, Dry Fruits & Nuts and Tea"."""
+    counts: dict[str, int] = {}
+    for p in products:
+        for slug in p.categories:
+            c = catalog.index.categories.get(slug)
+            if c is not None and c.parent != 0:
+                counts[c.name] = counts.get(c.name, 0) + 1
+    if not counts:  # no sub-categories: use whatever categories exist
+        for p in products:
+            for slug in p.categories:
+                c = catalog.index.categories.get(slug)
+                if c is not None:
+                    counts[c.name] = counts.get(c.name, 0) + 1
+    names = [n for n, _ in sorted(counts.items(), key=lambda kv: -kv[1])][:3]
+    if not names:
+        return "a few products"
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def _here(n: int, noun: str) -> str:
+    return f"Here's 1 {noun}" if n == 1 else f"Here are {n} {noun}s"
+
+
+def _tagline(
+    outcome: str,
+    label: str,
+    missed: list[str],
+    products: list,
+    relaxed: bool,
+    f: Filters,
+    cat_name: str | None,
+    catalog,
+) -> str:
+    n = len(products)
+    said = " ".join(missed) or label
+    if outcome == "related":
+        text = (
+            f"I don't have anything labelled \u201c{said}\u201d, but these are the closest "
+            f"I've got: {_describe(products, catalog)}."
+        )
+    elif outcome == "category":
+        text = (
+            f"Nothing in the store matches \u201c{said}\u201d. "
+            f"Here are popular picks from {cat_name} instead."
+        )
+    elif outcome == "popular":
+        text = f"I couldn't find \u201c{label}\u201d. Here are some popular products instead."
+    elif f.keywords:
+        text = f"{_here(n, 'result')} for \u201c{label}\u201d."
+    elif cat_name:
+        text = f"{_here(n, 'popular pick')} from {cat_name}."
+    else:
+        text = f"{_here(n, 'result')} for \u201c{label}\u201d."
+
+    if relaxed:
+        limit = (
+            f"under \u20b9{f.max_price:,}"
+            if f.max_price
+            else f"over \u20b9{f.min_price:,}"
+        )
+        text += f" (Nothing fit {limit}, so I dropped that limit.)"
+    return text
 
 
 def _resolve_category(text: str | None, catalog) -> str | None:
