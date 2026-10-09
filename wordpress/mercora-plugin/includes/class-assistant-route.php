@@ -39,11 +39,13 @@ final class Assistant_Route
         status_header(200);
 
         $config = [
+            // Browser-facing brain URL only. MERCORA_BRAIN_URL is deliberately
+            // NOT a fallback here: it points at the brain as seen from inside
+            // the cluster (host.k3d.internal), which no browser can resolve.
+            // Empty means "use alice.js's localhost default".
             "aliceApi" => defined("MERCORA_BRAIN_PUBLIC_URL")
                 ? MERCORA_BRAIN_PUBLIC_URL
-                : (defined("MERCORA_BRAIN_URL")
-                    ? MERCORA_BRAIN_URL
-                    : ""),
+                : "",
             "storeApi" => esc_url_raw(rest_url("wc/store/v1")),
             "mercoraApi" => esc_url_raw(rest_url("mercora/v1")),
             "isLoggedIn" => is_user_logged_in(),
@@ -95,6 +97,7 @@ final class Assistant_Route
         if (!function_exists("wc_get_attribute_taxonomies")) {
             return [
                 "name" => get_bloginfo("name"),
+                "tenant_id" => Context_Store::tenant_id(),
                 "currency" => "INR",
                 "locale" => get_locale(),
                 "attributes" => [],
@@ -119,6 +122,9 @@ final class Assistant_Route
 
         return [
             "name" => get_bloginfo("name"),
+            // Which store this is, as the brain knows it. The brain serves many
+            // stores from one process; this is how a turn is attributed.
+            "tenant_id" => Context_Store::tenant_id(),
             "currency" => function_exists("get_woocommerce_currency")
                 ? get_woocommerce_currency()
                 : "INR",

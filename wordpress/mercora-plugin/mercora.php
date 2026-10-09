@@ -35,6 +35,11 @@ require_once MERCORA_PATH . "includes/class-footer.php";
 require_once MERCORA_PATH . "includes/class-sync.php";
 require_once MERCORA_PATH . "includes/class-brain.php";
 require_once MERCORA_PATH . "includes/class-chat-state.php";
+require_once MERCORA_PATH . "includes/class-context-store.php";
+require_once MERCORA_PATH . "includes/class-recommendations.php";
+require_once MERCORA_PATH . "includes/mcp/class-mcp-server.php";
+require_once MERCORA_PATH . "includes/mcp/class-mcp-tools.php";
+require_once MERCORA_PATH . "includes/mcp/class-mcp-rest.php";
 
 Mercora\Assistant_Route::init();
 Mercora\Rest::init();
@@ -43,10 +48,17 @@ Mercora\Catalog_Controls::init();
 Mercora\Home::init();
 Mercora\Footer::init();
 Mercora\Sync::init();
+Mercora\Context_Store::init();
 Mercora\Chat_State::init();
+Mercora\Recommendations::init();
+Mercora\Mcp_Rest::init();
 
 register_activation_hook(__FILE__, static function () {
     Mercora\Assistant_Route::add_rewrite();
+    Mercora\Context_Store::install();
     flush_rewrite_rules();
 });
-register_deactivation_hook(__FILE__, "flush_rewrite_rules");
+register_deactivation_hook(__FILE__, static function () {
+    wp_clear_scheduled_hook("mercora_context_gc");
+    flush_rewrite_rules();
+});

@@ -19,6 +19,13 @@ defined("ABSPATH") || exit();
  * The whole thing is stored as ONE JSON string, capped in size, because
  * WooCommerce loads the session on every request and because PHP arrays cannot
  * tell `{}` from `[]` (the brain's schema can).
+ *
+ * This session is the WORKING copy and it is deliberately short-lived. The part
+ * worth keeping — the episodic category history, the recommendation payload, the
+ * shaping slots — is mirrored for logged-in customers into `Context_Store`
+ * (MariaDB, per tenant), which survives session expiry AND checkout. `get()`
+ * seeds a brand-new session from there, so a customer returning next week starts
+ * with their context instead of a blank slate.
  */
 final class Chat_State
 {
@@ -80,14 +87,59 @@ final class Chat_State
     {
         $s = self::session();
         if (!$s) {
-            return null;
+            return self::seed();
         }
         $raw = $s->get(self::KEY);
         if (!is_string($raw)) {
-            return null;
+            return self::seed();
         }
         $d = json_decode($raw, false);
-        return is_object($d) && ($d->v ?? 0) === self::SCHEMA ? $d : null;
+        if (!is_object($d) || ($d->v ?? 0) !== self::SCHEMA) {
+            return self::seed();
+        }
+        // An old session can predate the durable store, or have been written
+        // before this customer logged in: fill the episodic memory back in.
+        if (empty($d->ctx->category_history)) {
+            $seed = self::seed();
+            if ($seed && !empty($seed->ctx->category_history)) {
+                $d->ctx->category_history = $seed->ctx->category_history;
+            }
+        }
+        return $d;
+    }
+
+    /**
+     * A warm starting point for a customer with no live session.
+     *
+     * No transcript — the conversation is genuinely gone. Just the context that
+     * makes the next turn (and the homepage) pick up where they left off.
+     */
+    private static function seed(): ?object
+    {
+        if (!is_user_logged_in()) {
+            return null;
+        }
+        $ctx = Context_Store::get();
+        $history = Context_Store::clean_history($ctx["category_history"] ?? []);
+        if (!$history) {
+            return null;
+        }
+        return (object) [
+            "v" => self::SCHEMA,
+            "seeded" => true,
+            "turn" => 0,
+            "ctx" => (object) [
+                "on_screen" => [],
+                "viewed" => [],
+                "added" => [],
+                "rejected" => Context_Store::clean_ids($ctx["rejected"] ?? [], 20),
+                "slots" => (object) (array) ($ctx["slots"] ?? []),
+                "pending" => null,
+                "focus" => null,
+                "category_history" => $history,
+            ],
+            "msgs" => [],
+        ];
     }
 
     public static function rest_save($request)
@@ -110,9 +162,23 @@ final class Chat_State
         $s->set_customer_session_cookie(true);
         $s->set(self::KEY, $json);
 
+        // Mirror the keepable part into MariaDB, for this tenant and this
+        // customer. The user id comes from the authenticated request, never
+        // from the body — the browser cannot write anyone else's context.
+        // Guests are a no-op inside Context_Store.
+        $state = json_decode($json, true);
+        $durable = Context_Store::record_turn(
+            null,
+            $state["ctx"]["category_history"] ?? [],
+            $state["ctx"]["slots"] ?? [],
+            $state["ctx"]["rejected"] ?? [],
+            $state["reco"] ?? null,
+        );
+
         return rest_ensure_response([
             "saved" => true,
             "bytes" => strlen($json),
+            "durable" => null !== $durable,
         ]);
     }
 
@@ -122,6 +188,13 @@ final class Chat_State
         return rest_ensure_response(["cleared" => true]);
     }
 
+    /**
+     * Drop the conversation.
+     *
+     * Only the session copy. `Context_Store` is deliberately left alone: a
+     * customer who just checked out is the single best person to recommend to,
+     * and "start a new chat" means a new chat, not amnesia about their taste.
+     */
     public static function clear(): void
     {
         $s = self::session();
@@ -209,6 +282,11 @@ final class Chat_State
             "slots" => is_object($slots) ? $slots : new \stdClass(),
             "pending" => self::scrub(self::prop($c, "pending")),
             "focus" => self::scrub(self::prop($c, "focus")),
+            // Episodic memory. The brain merges it and returns it in the patch;
+            // we only carry it so the next turn can send it back in.
+            "category_history" => Context_Store::clean_history(
+                self::prop($c, "category_history", []),
+            ),
         ];
 
         $msgs = [];
@@ -251,13 +329,19 @@ final class Chat_State
             $msgs[] = $entry;
         }
 
-        return [
+        $out = [
             "v" => self::SCHEMA,
             "saved_at" => time(),
             "turn" => max(0, min(100000, (int) self::prop($in, "turn", 0))),
             "ctx" => $ctx,
             "msgs" => $msgs,
         ];
+
+        $reco = Context_Store::clean_reco(self::prop($in, "reco"));
+        if (null !== $reco) {
+            $out["reco"] = $reco;
+        }
+        return $out;
     }
 
     /** JSON, with the oldest messages dropped until it fits the size cap. */

@@ -120,6 +120,12 @@ class Ctx(BaseModel):
     cart: list[dict] = Field(default_factory=list)
     page: str | None = None
     past_purchases: list[int] = Field(default_factory=list)
+    category_history: list[str] = Field(default_factory=list)
+    """Category slugs the shopper has discussed, most recent first, max 3.
+
+    The brain is stateless: WordPress owns this list (durably, per customer) and
+    sends it in with every turn. The brain pushes the current category onto the
+    front and hands the new list back in `patch.category_history`."""
 
 
 # ------------------------------------------------------------------ store
@@ -173,6 +179,28 @@ class Patch(BaseModel):
     pending: Any = None
     focus: Any = None
     page: str | None = None
+    category_history: list[str] | None = None
+
+
+class RecoTier(BaseModel):
+    category: str | None = None
+    product_ids: list[int] = Field(default_factory=list)
+    # also_like only: the complementary categories, and the inferred plan
+    # ("trekking & camping trip") that explains why they are here.
+    categories: list[str] | None = None
+    title: str | None = None
+
+
+class Reco(BaseModel):
+    """Tiered recommendation payload for the store's homepage.
+
+    `product_ids` is ranked *intent*, not a promise: the brain's catalog snapshot
+    can lag the store, so WordPress re-validates every id against live stock and
+    visibility and backfills from `category` before rendering."""
+
+    v: Literal[1] = 1
+    category_history: list[str] = Field(default_factory=list)
+    tiers: dict[str, RecoTier] = Field(default_factory=dict)
 
 
 class CartAddAction(BaseModel):
@@ -241,15 +269,19 @@ class TurnResponse(BaseModel):
     action: Action = None
     display: Display
     meta: Meta
+    reco: Reco | None = None
 
     def to_dict(self) -> dict:
-        return {
+        out = {
             "turn": self.turn,
             "patch": _patch_to_wire(self.patch),
             "action": self.action.model_dump(mode="json") if self.action else None,
             "display": self.display.model_dump(exclude_none=True, mode="json"),
             "meta": self.meta.model_dump(mode="json"),
         }
+        if self.reco is not None:
+            out["reco"] = self.reco.model_dump(mode="json")
+        return out
 
 
 # ------------------------------------------------------------------ helpers

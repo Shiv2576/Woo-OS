@@ -37,12 +37,15 @@ from app.contract import (
     Display,
     NavigateAction,
     Patch,
+    Reco,
+    RecoTier,
     Slots,
     TurnRequest,
     TurnResponse,
     meta,
     validate_response,
 )
+from app.graph.also_like import also_like
 from app.graph.decide import Decision, Filters, decide
 from app.graph.shadow import shadow_intent
 
@@ -137,6 +140,120 @@ def _norm(s: str) -> str:
 
 
 async def handle_turn(req: TurnRequest, catalog, llm, llm_model: str) -> TurnResponse:
+    """Run one turn, then attach the tiered recommendation payload.
+
+    `_turn` owns the conversation. Recommendations are derived *afterwards* from
+    the finished patch, in one place, so every one of the ~25 response paths gets
+    them without having to know they exist."""
+    resp = await _turn(req, catalog, llm, llm_model)
+    resp.reco = _reco(req, resp, catalog)
+    if resp.reco is not None:
+        await _attach_also_like(req, resp, catalog, llm, llm_model)
+    validate_response(resp)
+    return resp
+
+
+async def _attach_also_like(req: TurnRequest, resp: TurnResponse, catalog, llm, llm_model: str) -> None:
+    """Add the "You may also like" tier: OTHER categories the shopper's plan needs.
+
+    Never fails the turn — a missing tier just leaves the store's default."""
+    reco = resp.reco
+    cart_ids = [int(i["product_id"]) for i in _cart_items(req.ctx.cart)]
+    shown = [pid for t in reco.tiers.values() for pid in t.product_ids]
+    try:
+        mission, ids, tin, tout = await also_like(
+            reco.category_history,
+            catalog,
+            llm,
+            llm_model,
+            exclude_ids=[i for i in cart_ids if i] + list(req.ctx.rejected) + shown,
+        )
+    except Exception:
+        log.exception("also_like failed; leaving the default section")
+        return
+    if tin or tout:
+        resp.meta.llm_calls += 1
+        resp.meta.tokens_in += tin
+        resp.meta.tokens_out += tout
+    if mission and ids:
+        reco.tiers["also_like"] = RecoTier(
+            categories=list(mission.categories),
+            title=mission.title,
+            product_ids=ids,
+        )
+
+
+RECO_TIER_SIZE = 8
+
+
+def _reco(req: TurnRequest, resp: TurnResponse, catalog) -> Reco | None:
+    """Three tiers of product ids, newest discussed category first.
+
+    The history comes in on `ctx.category_history` (WordPress owns it durably).
+    Whatever category this turn settled on is pushed to the front, de-duplicated,
+    and capped at three — so tier 1 is "what we just talked about", tier 2 and
+    tier 3 are the two topics before it. Tiers are filled from the live catalog
+    honouring the shopper's current price slots, and nothing already in the cart
+    or explicitly rejected is recommended back to them.
+    """
+    history = _push_category(
+        list(req.ctx.category_history),
+        _reco_category(req, resp),
+    )
+    # Hand the new history back so WordPress persists exactly what we used.
+    resp.patch.category_history = history
+
+    slots = resp.patch.slots or req.ctx.slots
+    cart_ids = [int(i["product_id"]) for i in _cart_items(req.ctx.cart)]
+    taken: list[int] = [i for i in cart_ids if i] + list(req.ctx.rejected)
+
+    tiers: dict[str, RecoTier] = {}
+    for n in (1, 2, 3):
+        cat = history[n - 1] if len(history) >= n else None
+        ids: list[int] = []
+        if cat:
+            res = catalog.index.search(
+                SearchQuery(
+                    category=cat,
+                    min_price=slots.min_price,
+                    max_price=slots.max_price,
+                    in_stock_only=True,
+                    exclude_ids=taken,
+                    limit=RECO_TIER_SIZE,
+                )
+            )
+            ids = [p.id for p in res.products]
+            taken.extend(ids)  # a product appears in at most one tier
+        tiers[f"tier_{n}"] = RecoTier(category=cat, product_ids=ids)
+
+    if not any(t.product_ids for t in tiers.values()):
+        return None  # nothing to recommend yet; leave whatever the store has
+    return Reco(v=1, category_history=history, tiers=tiers)
+
+
+def _reco_category(req: TurnRequest, resp: TurnResponse) -> str | None:
+    """The category this turn was actually about.
+
+    The patch's category wins (the turn just set it); otherwise the slot we came
+    in with; otherwise the category of the product in focus, so "add the black
+    one" still counts as a topic."""
+    if resp.patch.slots is not None and resp.patch.slots.cat:
+        return resp.patch.slots.cat
+    if req.ctx.slots.cat:
+        return req.ctx.slots.cat
+    return None
+
+
+def _push_category(history: list[str], cat: str | None, keep: int = 3) -> list[str]:
+    """Most recent first, no duplicates, at most `keep`. Pure, so it is testable."""
+    out = [c for c in history if isinstance(c, str) and c]
+    if cat:
+        out = [c for c in out if c != cat]
+        out.insert(0, cat)
+    return out[:keep]
+
+
+async def _turn(req: TurnRequest, catalog, llm, llm_model: str) -> TurnResponse:
     t0 = time.perf_counter()
 
     # 1. GATE

@@ -1,0 +1,77 @@
+/* wordpress/mercora-plugin/assets/recommendations.css
+ *
+ * Styles ONLY the personalised tier grid injected by recommendations.js into
+ * [data-mercora-slot]. The default sections it replaces keep the theme's and
+ * WooCommerce's own styling — nothing here touches them.
+ *
+ * Four across to match the homepage's [products columns="4"], so swapping a
+ * default section for a personalised one does not change the page's rhythm.
+ */
+
+/* Belt and braces: some themes set `display` on bare element selectors, which
+   beats the browser's default styling for [hidden]. Both the slot and the
+   default block rely on `hidden` to toggle, so pin it down. */
+section[data-mercora-tier][hidden],
+[data-mercora-tier] [data-mercora-slot][hidden],
+[data-mercora-tier] [data-mercora-default][hidden] {
+  display: none !important;
+}
+
+.mercora-reco__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.5rem 1.25rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 980px) {
+  .mercora-reco__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .mercora-reco__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.mercora-reco__card a {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.mercora-reco__card img,
+.mercora-reco__ph {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, .04);
+}
+
+.mercora-reco__name {
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.mercora-reco__price {
+  opacity: .7;
+  font-size: .9em;
+}
+
+.mercora-reco__card a:hover .mercora-reco__name { text-decoration: underline; }
+
+/* The swap is personalised content appearing in place of a generic section;
+   a short fade makes that read as intentional rather than as a glitch. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-mercora-state="personalised"] .mercora-reco__grid {
+    animation: mercora-reco-in .28s ease-out both;
+  }
+  @keyframes mercora-reco-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+  }
+}

@@ -97,6 +97,57 @@
         }
       ]
     },
+    "category_history": {
+      "description": "Product-category slugs the shopper has discussed, most recent first. Capped at three: tier 1, tier 2, tier 3.",
+      "type": "array",
+      "maxItems": 3,
+      "items": { "type": "string", "minLength": 1, "maxLength": 120 }
+    },
+    "reco": {
+      "description": "Tiered homepage recommendation payload. Product ids are the brain's ranked intent; the store re-validates them against live stock and visibility before rendering.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["v", "category_history", "tiers"],
+          "properties": {
+            "v": { "const": 1 },
+            "category_history": { "$ref": "#/definitions/category_history" },
+            "tiers": {
+              "type": "object",
+              "required": ["tier_1", "tier_2", "tier_3"],
+              "properties": {
+                "tier_1": { "$ref": "#/definitions/reco_tier" },
+                "tier_2": { "$ref": "#/definitions/reco_tier" },
+                "tier_3": { "$ref": "#/definitions/reco_tier" },
+                "also_like": { "$ref": "#/definitions/reco_tier" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "reco_tier": {
+      "type": "object",
+      "required": ["category", "product_ids"],
+      "properties": {
+        "category": { "type": ["string", "null"] },
+        "product_ids": {
+          "type": "array",
+          "maxItems": 12,
+          "items": { "type": "integer" }
+        },
+        "categories": {
+          "type": ["array", "null"],
+          "maxItems": 4,
+          "items": { "type": "string" }
+        },
+        "title": { "type": ["string", "null"], "maxLength": 60 }
+      },
+      "additionalProperties": false
+    },
     "ctx": {
       "type": "object",
       "required": ["on_screen", "slots", "pending", "cart", "past_purchases"],
@@ -110,6 +161,7 @@
         "cart": { "type": "array" },
         "page": { "type": ["string", "null"] },
         "past_purchases": { "type": "array", "items": { "type": "integer" } },
+        "category_history": { "$ref": "#/definitions/category_history" },
         "focus": { "$ref": "#/definitions/focus" }
       },
       "additionalProperties": false
@@ -151,6 +203,7 @@
         "slots": { "$ref": "#/definitions/slots" },
         "pending": { "$ref": "#/definitions/pending" },
         "page": { "type": ["string", "null"] },
+        "category_history": { "$ref": "#/definitions/category_history" },
         "focus": { "$ref": "#/definitions/focus" }
       },
       "additionalProperties": false
@@ -208,6 +261,7 @@
       "properties": {
         "turn": { "type": "integer" },
         "patch": { "$ref": "#/definitions/patch" },
+        "reco": { "$ref": "#/definitions/reco" },
         "action": { "$ref": "#/definitions/action" },
         "display": { "$ref": "#/definitions/display" },
         "meta": {

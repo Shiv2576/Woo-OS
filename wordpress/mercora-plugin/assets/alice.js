@@ -33,9 +33,17 @@
     cart:           [],
     page:           window.location.pathname,
     past_purchases: [],
+    // Episodic memory: category slugs, most recent first, max 3. WordPress owns
+    // it durably; we carry it so each turn can send it in and the brain can
+    // hand back the merged list.
+    category_history: [],
   });
   let ctx = freshCtx();
   let turnNum = 0;
+
+  // The newest tiered recommendation payload from the brain. Posted to
+  // WordPress with the chat so it outlives this session and this cart.
+  let lastReco = null;
 
   const BRAIN = (cfg.aliceApi || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
@@ -110,7 +118,9 @@
         ctx: {
           on_screen: ctx.on_screen, viewed: ctx.viewed, added: ctx.added, rejected: ctx.rejected,
           slots: ctx.slots, pending: ctx.pending, focus: ctx.focus,        // never the cart
+          category_history: ctx.category_history,
         },
+        reco: lastReco,                       // mirrored into MariaDB server-side
         msgs: transcript,
       });
       // The REST nonce matters for logged-in shoppers: without it WordPress treats the
@@ -360,15 +370,21 @@
     if (patch.viewed)    ctx.viewed   = [...ctx.viewed,   ...patch.viewed].slice(-20);
     if (patch.added)     ctx.added    = [...ctx.added,    ...patch.added].slice(-20);
     if (patch.rejected)  ctx.rejected = [...ctx.rejected, ...patch.rejected].slice(-20);
+    // Replacement, not append: the brain already de-duplicated and capped it.
+    if (Array.isArray(patch.category_history)) ctx.category_history = patch.category_history.slice(0, 3);
     // ctx.cart is NEVER taken from the brain — it is read from WooCommerce.
   }
 
   // ── Restore a saved chat (from the WooCommerce session) ───────────────────
   async function restoreChat(saved) {
-    if (!saved || saved.v !== 1 || !Array.isArray(saved.msgs) || !saved.msgs.length) return;
+    if (!saved || saved.v !== 1) return;
 
+    // The context is adopted even with no transcript. A returning customer whose
+    // session expired arrives "seeded" from MariaDB: no messages to replay, but
+    // their category history must still go out with the next turn.
     ctx = { ...freshCtx(), ...(saved.ctx || {}), cart: [] };       // the cart is re-read live, never restored
     turnNum = saved.turn || 0;
+    if (!Array.isArray(saved.msgs) || !saved.msgs.length) return;
 
     const ids = [...new Set(saved.msgs.flatMap(m => m.ids || []))];
     const cards = await fetchCards(ids);
@@ -400,7 +416,8 @@
     transcript = [];
     turnNum = 0;
     const cart = ctx.cart;
-    ctx = { ...freshCtx(), cart };
+    const history = ctx.category_history;   // taste survives "start over"; the chat does not
+    ctx = { ...freshCtx(), cart, category_history: history };
     thread.innerHTML = '';
     showGreeting();
     input.focus();
@@ -440,6 +457,7 @@
       if (resp.turn !== turnNum) throw new Error(`Turn mismatch: expected ${turnNum}, got ${resp.turn}`);
 
       applyPatch(resp.patch);
+      if (resp.reco) lastReco = resp.reco;        // keep the last non-empty payload
 
       const isCartAction = resp.action && resp.action.type.startsWith('cart.');
       const result = await executeAction(resp.action);
